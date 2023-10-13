@@ -28,11 +28,11 @@ export default function Home() {
   }, [account]);
 
   return (
-    <div className="bg-gradient-to-tr from-[#2b1b6f] via-[#472ed5] to-[#0090ff]">
+    <div className="bg-gradient-to-tr from-[#2b1b6f] to-[#111827]">
       <section className="">
         {/* <Header className="bg-gradient-to-r from-black via-black via-black to-black"/> */}
         <section className="w-full flex-1 md:h-screen">
-          <div className="bg-gradient-to-tr from-[#2b1b6f] via-[#472ed5] to-[#0090ff] pt-24 md:pt-16 w-full h-full px-4 flex flex-col items-center justify-center md:grid md:grid-cols-12 text-white">
+          <div className="bg-gradient-to-tr from-[#2b1b6f] to-[#111827] pt-24 md:pt-16 w-full h-full px-4 flex flex-col items-center justify-center md:grid md:grid-cols-12 text-white">
             <div className="flex flex-col md:mt-0 items-start px-4 ssm:px-8 justify-center md:col-span-6 space-y-4">
               <div className="animate__animated animate__backInDown  text-[#fafafa] text-xl ss:text-2xl ssm:text-4xl xl:text-5xl font-medium ">
                 <p>Decentralized</p>
@@ -64,7 +64,7 @@ export default function Home() {
           </div>
         </section>
       </section>
-      {/* bg-gradient-to-tr from-[#2b1b6f] via-[#472ed5] to-[#0090ff] */}
+      {/* bg-gradient-to-tr from-[#2b1b6f] to-[#111827] */}
       <section className="h-full w-full flex flex-col  text-white py-8  items-center justify-center">
         <h1 className="text-center text-4xl sm:text-5xl pb-5 underline text-[#f5c9ff] font-bold">
           About the App
