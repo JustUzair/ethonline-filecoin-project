@@ -8,22 +8,37 @@ import { configureChains, createClient, WagmiConfig } from "wagmi";
 import { NotificationProvider } from "web3uikit";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/router";
-import { filecoin } from "wagmi/chains";
+// import { filecoin } from "wagmi/chains";
 import { publicProvider } from "wagmi/providers/public";
 import { MoralisProvider } from "react-moralis";
 import { jsonRpcProvider } from "wagmi/providers/jsonRpc";
 import "../styles/globals.css";
 import Script from "next/script";
 
-const filecoinHyperspaceTestnet = {
-  id: 314159,
-  name: "Filecoin-Calibration",
+const filecoin = {
+  id: 314,
+  name: "Filecoin",
   network: "filecoin",
 
   rpcUrls: {
+    public: { http: ["https://rpc.ankr.com/filecoin"] },
+  },
+  blockExplorers: {
     default: {
-      http: ["https://filecoin-calibration.chainup.net/rpc/v1"],
+      name: "Filecoin - Mainnet",
+      url: "https://filscan.io",
     },
+  },
+
+  testnet: false,
+};
+const filecoinCalibrationTestnet = {
+  id: 314159,
+  name: "Filecoin-Calibration",
+  network: "filecoin-testnet",
+
+  rpcUrls: {
+    public: { http: ["https://filecoin-calibration.chainup.net/rpc/v1"] },
   },
   blockExplorers: {
     default: {
@@ -36,11 +51,11 @@ const filecoinHyperspaceTestnet = {
 };
 // Testnet faucet  :: https://faucet.calibration.fildev.network/
 const { chains, provider } = configureChains(
-  [filecoin, filecoinHyperspaceTestnet],
+  [filecoin, filecoinCalibrationTestnet],
   [
-    publicProvider(),
+    // publicProvider(),
     jsonRpcProvider({
-      rpc: (chain) => ({ http: chain.rpcUrls.default.http[0] }),
+      rpc: chain => ({ http: chain.rpcUrls.public.http[0] }),
     }),
   ]
 );

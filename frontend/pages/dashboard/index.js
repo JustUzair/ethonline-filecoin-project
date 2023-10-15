@@ -4,7 +4,7 @@ import fileCoinLogo from "../../assets/img/filecoin.svg";
 
 const Dashboard = () => {
   return (
-    <div className="flex flex-col items-center justify-center w-screen min-h-screen bg-gray-900 py-10">
+    <div className="flex flex-col items-center justify-center w-[100%] min-h-screen bg-gray-900 py-10">
       <span className="text-[2rem] text-gray-400 align-middle w-[90%] mx-auto my-[30px] font-[400]">
         <div className="flex justify-around items-center w-[20%] text-[3rem] font-[500] text-[#0090FF] sm:flex-wrap md:flex-wrap">
           <Image src={fileCoinLogo} width={100} alt="filecoin" />
