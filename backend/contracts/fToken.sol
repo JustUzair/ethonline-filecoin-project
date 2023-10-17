@@ -1,240 +1,186 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "https://github.com/tellor-io/usingtellor/blob/master/contracts/UsingTellor.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-interface IPriceOracle {
-    function getLatestPrice(address tokenAddress) external view returns (uint256);
+interface IOracle {
+    function getPrice(address token) external view returns (uint256);
 }
 
-contract fToken is ERC20, ReentrancyGuard, UsingTellor {
+contract P2PLending is ERC20 {
     using SafeERC20 for IERC20;
 
     // Custom Errors
-    error ZeroAmount(string action);
-    error InsufficientCollateral(uint256 borrowValue, uint256 currentCollateralValue);
-    error InsufficientBorrowedAmount(uint256 requested, uint256 available);
-    error AccountNotEligibleForLiquidation(uint256 accountLiquidity, uint256 borrowValueInCollateral);
-    error InvalidAddress(address inputAddress);
-
-    // State Variables
-    IERC20 public collateralToken;
-    IERC20 public stablecoin;
-    IPriceOracle public oracle;
-
-    uint256 public constant COLLATERAL_FACTOR = 75e16;  // 75%
-    uint256 public reserveFactor = 10e16;
-    uint256 public liquidationIncentive = 110e16;
-
-    uint256 public totalBorrows;
-    uint256 public totalReserves;
-    uint256 public exchangeRateInitial = 1e18;
-    uint256 public exchangeRate = exchangeRateInitial;
-
-    uint256 public jumpMultiplierPerBlock = 10e16; // Example value
-    uint256 public kink = 80e16; // 80% is an example value
-
-    uint256 public maxBorrowRate;
-    uint256 public minBorrowRate;
-
-    address immutable owner;
-
-
-    mapping(address => uint256) public borrows;
-
-    uint256 public lastInterestUpdateBlock = block.number;
+    error InvalidAmount(uint256 provided, string reason);
+    error InvalidAddress(address providedAddress, string reason);
+    error ActiveBorrowNotFound();
+    error InsufficientCollateral(uint256 requiredCollateralRatio, uint256 currentCollateralRatio);
+    error CannotLiquidate(uint256 currentCollateralRatio);
 
     // Events
-    event Deposited(address indexed user, uint256 amount, uint256 cTokenAmount);
-    event Borrowed(address indexed user, uint256 amount);
-    event Repaid(address indexed user, uint256 amount);
-    event Withdrew(address indexed user, uint256 cTokenAmount, uint256 underlyingAmount);
-    event Liquidated(address indexed borrower, address indexed liquidator, uint256 repayAmount, uint256 collateralSeized);
-    event MaxBorrowRateUpdated(uint256 newRate);
-    event MinBorrowRateUpdated(uint256 newRate);
+    event Deposited(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event Borrowed(address indexed user, uint256 borrowAmount, uint256 collateralAmount);
+    event Repaid(address indexed user, uint256 repayAmount);
+    event CollateralAdded(address indexed user, uint256 collateralAmount);
+    event Liquidated(address indexed user, address indexed liquidator, uint256 amountLiquidated);
 
+    struct Borrower {
+        uint256 collateralAmount;
+        uint256 borrowedAmount;
+    }
 
-    // Constructor
-    constructor(
-        address _collateralToken, 
-        address _stablecoin, 
-        address _oracle,
-        uint256 _minBorrowRate,
-        uint256 _maxBorrowRate,
-        address payable _tellorAddress
-    ) ERC20("cToken", "cTK") UsingTellor(_tellorAddress) {
-        if (_collateralToken == address(0) || _stablecoin == address(0) || _oracle == address(0)) {
-            revert InvalidAddress(address(0));
+    IERC20 public stablecoin;
+    IERC20 public collateralToken;
+    IOracle public oracle;
+
+    mapping(address => uint256) public depositors;
+    mapping(address => Borrower) public borrowers;
+
+    uint256 public totalDeposited;
+    uint256 public totalBorrowed;
+    uint256 public lastUpdated;
+
+    uint256 private constant SCALING_FACTOR = 1e36;
+
+    uint256 public constant COLLATERAL_RATIO = 150 * SCALING_FACTOR;
+    uint256 public constant LIQUIDATION_BONUS = 110 * SCALING_FACTOR;
+    uint256 public constant BASE_BORROW_RATE = 2 * SCALING_FACTOR;
+    uint256 public constant MAX_BORROW_RATE = 15 * SCALING_FACTOR;
+    uint256 public constant INTEREST_INTERVAL = 1 days;
+
+    constructor(address _stablecoin, address _collateralToken, address _oracle) 
+        ERC20("fToken", "fLend") {
+       if(_stablecoin == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
+            revert InvalidAddress(address(0), "Invalid address provided");
         }
-        owner = msg.sender;
-
-        collateralToken = IERC20(_collateralToken);
         stablecoin = IERC20(_stablecoin);
-        oracle = IPriceOracle(_oracle);
-        minBorrowRate = _minBorrowRate;
-        maxBorrowRate = _maxBorrowRate;
+        collateralToken = IERC20(_collateralToken);
+        oracle = IOracle(_oracle);
+        lastUpdated = block.timestamp;
+    }
+
+    function getCurrentInterest() internal view returns (uint256) {
+        uint256 intervalsElapsed = (block.timestamp - lastUpdated) / INTEREST_INTERVAL;
+        uint256 supply = totalDeposited - totalBorrowed;
+        return supply * calculateBorrowRate() * intervalsElapsed * INTEREST_INTERVAL / SCALING_FACTOR / 365 days;
+    }
+
+    function getTokenValue(IERC20 token, uint256 amount) internal view returns (uint256) {
+        return oracle.getPrice(address(token)) * amount;
+    }
+
+    function calculateBorrowRate() internal view returns (uint256) {
+        uint256 utilization = (totalBorrowed * SCALING_FACTOR * 100) / totalDeposited;
+        return BASE_BORROW_RATE + (utilization * (MAX_BORROW_RATE - BASE_BORROW_RATE)) / SCALING_FACTOR;
+    }
+
+    function updateTimestamp() internal {
+        lastUpdated = block.timestamp;
     }
 
     function deposit(uint256 amount) external {
-        if (amount == 0) revert ZeroAmount("deposit");
+        if (amount <= 0) revert InvalidAmount(amount, "Amount should be greater than 0");
 
-        accrueInterest();
-
-        uint256 cTokenAmount = amount * 1e18 / exchangeRate;
-        _mint(msg.sender, cTokenAmount);
-        collateralToken.safeTransferFrom(msg.sender, address(this), amount);
-
-        emit Deposited(msg.sender, amount, cTokenAmount);
-    }
-
-    function borrow(uint256 amount) external {
-        if (amount == 0) {
-            revert ZeroAmount("borrow");
+        uint256 fTokensToMint = amount;
+        if (totalSupply() > 0) {
+            uint256 totalValue = totalDeposited + getCurrentInterest();
+            fTokensToMint = (amount * totalSupply()) / totalValue;
         }
-
-        accrueInterest();
-
-        uint256 currentCollateralValue = getCollateralValue(msg.sender);
-        uint256 borrowValue = amount * oracle.getLatestPrice(address(stablecoin));
-
-        if (borrowValue * 1e18 > currentCollateralValue * COLLATERAL_FACTOR) {
-            revert InsufficientCollateral(borrowValue, currentCollateralValue);
-        }
-
-        borrows[msg.sender] += amount;
-        totalBorrows += amount;
-        stablecoin.safeTransfer(msg.sender, amount);
-    }
-
-    function accrueInterest() public {
-        if(lastInterestUpdateBlock == block.number) revert("NO_ZERO");
-
-        uint256 cash = collateralToken.balanceOf(address(this));
-        uint256 borrows_ = totalBorrows;
-        uint256 reserves = totalReserves;
-
-        uint256 totalLiquidity = cash + borrows_ - reserves;
-
-        uint256 utilizationRate = 0;
-        if (totalLiquidity != 0) {
-            utilizationRate = borrows_ * 1e18 / totalLiquidity;
-        }
-
-        uint256 borrowRate = getBorrowRate(utilizationRate);
-        uint256 simpleInterestFactor = borrowRate * (block.number - lastInterestUpdateBlock);
-        uint256 interestAccrued = borrows_ * simpleInterestFactor / 1e18;
-
-        totalBorrows += interestAccrued;
-        totalReserves += interestAccrued * reserveFactor / 1e18;
-
-        // Update exchange rate
-        uint256 totalBalance = cash + borrows_ - totalReserves;
-        if (totalSupply() != 0) {
-            exchangeRate = totalBalance * 1e18 / totalSupply();
-        }
-
-        lastInterestUpdateBlock = block.number;
-    }
-
-    function repay(uint256 amount) external {
-        if (amount == 0) {
-            revert ZeroAmount("repay");
-        }
-
-        if (borrows[msg.sender] < amount) {
-            revert InsufficientBorrowedAmount(amount, borrows[msg.sender]);
-        }
-
-        borrows[msg.sender] -= amount;
-        totalBorrows -= amount;
+        updateTimestamp();
+        _mint(msg.sender, fTokensToMint);
+        totalDeposited += amount * SCALING_FACTOR;
         stablecoin.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit Deposited(msg.sender, amount);
     }
 
-    function withdraw(uint256 cTokenAmount) external {
-        if (cTokenAmount == 0) {
-            revert ZeroAmount("withdraw");
-        }
+    function withdraw(uint256 fTokenAmount) external {
+        if (fTokenAmount <= 0) revert InvalidAmount(fTokenAmount, "fToken amount should be greater than 0");
 
-        accrueInterest();
+        uint256 totalValue = totalDeposited + getCurrentInterest();
+        uint256 amount = (fTokenAmount * totalValue) / totalSupply();
+        _burn(msg.sender, fTokenAmount);
+        totalDeposited -= amount;
+        updateTimestamp();
+        stablecoin.safeTransfer(msg.sender, amount / SCALING_FACTOR);
 
-        uint256 withdrawalAmount = cTokenAmount * exchangeRate / 1e18;
-        _burn(msg.sender, cTokenAmount);
-        collateralToken.safeTransfer(msg.sender, withdrawalAmount);
+        emit Withdrawn(msg.sender, amount / SCALING_FACTOR);
     }
 
-    function liquidateBorrow(address borrower, uint256 repayAmount) external {
-        if (borrower == address(0)) revert InvalidAddress(borrower);
-        if (repayAmount == 0) revert ZeroAmount("liquidate");
+    function borrow(uint256 borrowAmount, uint256 collateralAmount) external {
+        if (borrowAmount <= 0 || collateralAmount <= 0) revert InvalidAmount(borrowAmount, "Both borrow and collateral amounts should be greater than 0");
 
-        uint256 latestPriceStablecoin = oracle.getLatestPrice(address(stablecoin));
+        uint256 stablecoinValue = getTokenValue(stablecoin, borrowAmount);
+        uint256 collateralValue = getTokenValue(collateralToken, collateralAmount);
+        if ((collateralValue * SCALING_FACTOR * 100) / stablecoinValue < COLLATERAL_RATIO)
+            revert InsufficientCollateral(COLLATERAL_RATIO, (collateralValue * SCALING_FACTOR * 100) / stablecoinValue);
 
-        uint256 borrowBalance = borrows[borrower];
-        uint256 borrowValueInCollateral = borrowBalance * latestPriceStablecoin;
+        borrowers[msg.sender] = Borrower(collateralAmount * SCALING_FACTOR, borrowAmount * SCALING_FACTOR);
+        totalBorrowed += borrowAmount * SCALING_FACTOR;
+        updateTimestamp();
+        stablecoin.safeTransfer(msg.sender, borrowAmount);
+        collateralToken.safeTransferFrom(msg.sender, address(this), collateralAmount);
 
-        uint256 accountLiquidity = getCollateralValue(borrower) - borrowValueInCollateral;
-        if (!(accountLiquidity * COLLATERAL_FACTOR < borrowValueInCollateral)) {
-            revert AccountNotEligibleForLiquidation(accountLiquidity, borrowValueInCollateral);
+        emit Borrowed(msg.sender, borrowAmount, collateralAmount);
+    }
+
+    function repayBorrow(uint256 repayAmount) external {
+        if (repayAmount <= 0) revert InvalidAmount(repayAmount, "Repay amount should be greater than 0");
+
+        Borrower storage borrower = borrowers[msg.sender];
+        if (borrower.borrowedAmount < repayAmount * SCALING_FACTOR) revert InvalidAmount(repayAmount, "Invalid repay amount");
+
+        borrower.borrowedAmount -= repayAmount * SCALING_FACTOR;
+        totalBorrowed -= repayAmount * SCALING_FACTOR;
+        updateTimestamp();
+        if (borrower.borrowedAmount == 0) {
+            uint256 collateralToReturn = borrower.collateralAmount / SCALING_FACTOR;
+            borrower.collateralAmount = 0;
+            collateralToken.safeTransfer(msg.sender, collateralToReturn);
         }
-
-        borrows[borrower] -= repayAmount;
-
-        uint256 collateralAmountToSeize = (repayAmount * latestPriceStablecoin * liquidationIncentive) / (oracle.getLatestPrice(address(collateralToken)) * 1e18);
-        
         stablecoin.safeTransferFrom(msg.sender, address(this), repayAmount);
-        collateralToken.safeTransferFrom(borrower, msg.sender, collateralAmountToSeize);
 
-        emit Liquidated(borrower, msg.sender, repayAmount, collateralAmountToSeize);
+        emit Repaid(msg.sender, repayAmount);
     }
 
-    function getExchangeRate() public view returns (uint256) {
-        return exchangeRate;
+    function addCollateral(uint256 collateralAmount) external {
+        if (collateralAmount <= 0) revert InvalidAmount(collateralAmount, "Collateral amount should be greater than 0");
+
+        Borrower storage borrower = borrowers[msg.sender];
+        if (borrower.borrowedAmount == 0) revert ActiveBorrowNotFound();
+
+        borrower.collateralAmount += collateralAmount * SCALING_FACTOR;
+        collateralToken.safeTransferFrom(msg.sender, address(this), collateralAmount);
+
+        emit CollateralAdded(msg.sender, collateralAmount);
     }
 
-    function getCollateralValue(address user) public view returns (uint256) {
-        uint256 cTokenBalance = balanceOf(user);
-        uint256 underlyingBalance = cTokenBalance * getExchangeRate() / 1e18;
-        return underlyingBalance * oracle.getLatestPrice(address(collateralToken)) / 1e18;
+    function calculateBorrowFee(uint256 amount) public view returns (uint256) {
+        return (amount * calculateBorrowRate()) / 100 / SCALING_FACTOR;
     }
 
-    function getBorrowRate(uint256 utilizationRate) public view returns (uint256) {
-        uint256 baseRatePerBlock = 1e16;
-        uint256 multiplierPerBlock = 4e16;
-        
-        uint256 rate;
-        if (utilizationRate > kink) {
-            uint256 excessUtilization = utilizationRate - kink;
-            rate = baseRatePerBlock + kink * multiplierPerBlock / 1e18 + excessUtilization * jumpMultiplierPerBlock / 1e18;
-        } else {
-            rate = baseRatePerBlock + utilizationRate * multiplierPerBlock / 1e18;
+    function liquidate(address user) external {
+        if (user == address(0)) revert InvalidAddress(user, "Invalid user address");
+
+        Borrower storage borrower = borrowers[user];
+        uint256 borrowedValue = getTokenValue(stablecoin, borrower.borrowedAmount / SCALING_FACTOR);
+        uint256 collateralValue = getTokenValue(collateralToken, borrower.collateralAmount / SCALING_FACTOR);
+        if ((collateralValue * SCALING_FACTOR * 100) / borrower.borrowedAmount >= COLLATERAL_RATIO)
+            revert CannotLiquidate((collateralValue * SCALING_FACTOR * 100) / borrower.borrowedAmount);
+
+        uint256 requiredCollateralValue = (borrowedValue * COLLATERAL_RATIO) / SCALING_FACTOR;
+        uint256 shortfallValue = requiredCollateralValue - collateralValue;
+        uint256 requiredCollateral = (shortfallValue * SCALING_FACTOR) / oracle.getPrice(address(collateralToken));
+        uint256 liquidationBonus = (requiredCollateral * LIQUIDATION_BONUS) / SCALING_FACTOR;
+        uint256 totalCollateralToLiquidator = requiredCollateral + liquidationBonus;
+        if (totalCollateralToLiquidator > borrower.collateralAmount) {
+            totalCollateralToLiquidator = borrower.collateralAmount;
         }
+        borrower.collateralAmount -= totalCollateralToLiquidator;
+        collateralToken.safeTransfer(msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
 
-        if (rate < minBorrowRate) {
-            return minBorrowRate;
-        } else if (rate > maxBorrowRate) {
-            return maxBorrowRate;
-        } else {
-            return rate;
-        }
+        emit Liquidated(user, msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
     }
-
-    function setMaxBorrowRate(uint256 _maxBorrowRate) external onlyOwner {
-        maxBorrowRate = _maxBorrowRate;
-        emit MaxBorrowRateUpdated(_maxBorrowRate);
-    }
-
-    function setMinBorrowRate(uint256 _minBorrowRate) external onlyOwner {
-        minBorrowRate = _minBorrowRate;
-        emit MinBorrowRateUpdated(_minBorrowRate);
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-
 }
