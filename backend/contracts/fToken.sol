@@ -162,25 +162,40 @@ contract P2PLending is ERC20 {
     }
 
     function liquidate(address user) external {
-        if (user == address(0)) revert InvalidAddress(user, "Invalid user address");
-
         Borrower storage borrower = borrowers[user];
+        
+        // Calculate how much debt needs to be repaid for this liquidation.
         uint256 borrowedValue = getTokenValue(stablecoin, borrower.borrowedAmount / SCALING_FACTOR);
         uint256 collateralValue = getTokenValue(collateralToken, borrower.collateralAmount / SCALING_FACTOR);
+        uint256 requiredCollateralValue = (borrowedValue * COLLATERAL_RATIO) / SCALING_FACTOR;
+        uint256 shortfallValue = requiredCollateralValue - collateralValue;
+        uint256 debtToRepay = shortfallValue / oracle.getPrice(address(stablecoin));
+
+        // Ensure the liquidator has provided enough stablecoin for this liquidation.
+        require(stablecoin.balanceOf(msg.sender) >= debtToRepay, "Not enough stablecoin to liquidate");
+
         if ((collateralValue * SCALING_FACTOR * 100) / borrower.borrowedAmount >= COLLATERAL_RATIO)
             revert CannotLiquidate((collateralValue * SCALING_FACTOR * 100) / borrower.borrowedAmount);
 
-        uint256 requiredCollateralValue = (borrowedValue * COLLATERAL_RATIO) / SCALING_FACTOR;
-        uint256 shortfallValue = requiredCollateralValue - collateralValue;
         uint256 requiredCollateral = (shortfallValue * SCALING_FACTOR) / oracle.getPrice(address(collateralToken));
         uint256 liquidationBonus = (requiredCollateral * LIQUIDATION_BONUS) / SCALING_FACTOR;
         uint256 totalCollateralToLiquidator = requiredCollateral + liquidationBonus;
         if (totalCollateralToLiquidator > borrower.collateralAmount) {
             totalCollateralToLiquidator = borrower.collateralAmount;
         }
+
+        // Transfer stablecoin from liquidator to the contract.
+        stablecoin.safeTransferFrom(msg.sender, address(this), debtToRepay);
+
+        // Reduce borrower's debt.
+        borrower.borrowedAmount -= debtToRepay * SCALING_FACTOR;
+        totalBorrowed -= debtToRepay * SCALING_FACTOR;
+
+        // Send the collateral token to the liquidator.
         borrower.collateralAmount -= totalCollateralToLiquidator;
         collateralToken.safeTransfer(msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
 
         emit Liquidated(user, msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
     }
+
 }
