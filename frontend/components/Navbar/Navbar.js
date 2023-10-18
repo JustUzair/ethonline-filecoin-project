@@ -8,22 +8,15 @@ import Logo from "../../assets/img/logo.png";
 import styled from "styled-components";
 import contractAddresses from "../../constants/networkMapping.json";
 
-import abi from "../../constants/Abi.json";
-
 const Navbar = () => {
-  const [isSignedUp, setIsSignedUp] = useState(false);
-  const [creatorContractAddress, setCreatorContractAddress] = useState(
-    "0x0000000000000000000000000000000000000000"
-  );
-
   const { runContractFunction } = useWeb3Contract();
   const { enableWeb3, authenticate, account, isWeb3Enabled } = useMoralis();
   const { chainId: chainIdHex } = useMoralis();
   const chainId = parseInt(chainIdHex);
   const contractAddress =
     chainId in contractAddresses
-      ? contractAddresses[chainId]["UserFactory"][
-          contractAddresses[chainId]["UserFactory"].length - 1
+      ? contractAddresses[chainId]["lendingPool"][
+          contractAddresses[chainId]["lendingPool"].length - 1
         ]
       : null;
   const getStyle = {
@@ -63,55 +56,7 @@ const Navbar = () => {
     },
   };
 
-  async function checkOwner() {
-    if (!isWeb3Enabled) await enableWeb3();
-    if (account) {
-      runContractFunction({
-        params: {
-          abi,
-          contractAddress,
-          functionName: "isSignedUp",
-          params: { _creatorAddress: account },
-        },
-        //
-        onError: (error) => {
-          console.error(error);
-        },
-        onSuccess: (data) => {
-          //   console.log(`data : ${data}`);
-          setIsSignedUp(data);
-        },
-      });
-    }
-  }
-
-  async function getCreatorContractAddress() {
-    if (!isWeb3Enabled) await enableWeb3();
-    if (account) {
-      runContractFunction({
-        params: {
-          abi,
-          contractAddress,
-          functionName: "getCreatorContractAddress",
-          params: { _creatorAddress: account },
-        },
-        //
-        onError: (error) => {
-          console.error(error);
-        },
-        onSuccess: (data) => {
-          //   console.log(data);
-          setCreatorContractAddress(data.toString());
-        },
-      });
-    }
-  }
-  useEffect(() => {
-    checkOwner();
-    if (isSignedUp) {
-      getCreatorContractAddress();
-    }
-  }, [account, isSignedUp]);
+  useEffect(() => {}, [account]);
   return (
     <nav style={getStyle.navbar}>
       <Link href="/" className="nav__link">

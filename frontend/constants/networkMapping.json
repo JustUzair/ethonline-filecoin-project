@@ -1,4 +1,28 @@
 {
-  "314159": [],
-  "314": []
+  "314159": {
+    "tokens": [
+      {
+        "name": "filecoin",
+        "addresses": ["0xb884adABb32f9B89711F417E7beBBD39161FABe4"]
+      },
+      {
+        "name": "stablecoin",
+        "addresses": ["0x54efa9BdAE57a9d6564D1C91494B4A6451ca3543"]
+      }
+    ],
+    "lendingPool": ["0xDe357BDc18B18b8A1518179322bcF4f31125Fff9"]
+  },
+  "314": {
+    "tokens": [
+      {
+        "name": "filecoin",
+        "addresses": []
+      },
+      {
+        "name": "stablecoin",
+        "addresses": []
+      }
+    ],
+    "lendingPool": []
+  }
 }

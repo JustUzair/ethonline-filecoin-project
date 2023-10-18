@@ -55,7 +55,7 @@ const { chains, provider } = configureChains(
   [
     // publicProvider(),
     jsonRpcProvider({
-      rpc: chain => ({ http: chain.rpcUrls.public.http[0] }),
+      rpc: (chain) => ({ http: chain.rpcUrls.public.http[0] }),
     }),
   ]
 );
@@ -74,6 +74,7 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
   return (
     <>
+      <Script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></Script>
       <Script
         src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
