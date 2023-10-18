@@ -17,6 +17,7 @@ contract P2PLending is ERC20 {
     error ActiveBorrowNotFound();
     error InsufficientCollateral(uint256 requiredCollateralRatio, uint256 currentCollateralRatio);
     error CannotLiquidate(uint256 currentCollateralRatio);
+    error NotOwner(address caller);
 
     // Events
     event Deposited(address indexed user, uint256 amount);
@@ -25,40 +26,71 @@ contract P2PLending is ERC20 {
     event Repaid(address indexed user, uint256 repayAmount);
     event CollateralAdded(address indexed user, uint256 collateralAmount);
     event Liquidated(address indexed user, address indexed liquidator, uint256 amountLiquidated);
+    event CollateralRatioUpdated(uint256 indexed newRatio);
+    event LiquidationBonusUpdated(uint256 indexed newBonus);
+    event BaseBorrowRateUpdated(uint256 indexed newRate);
+    event MaxBorrowRateUpdated(uint256 indexed newRate);
+
 
     struct Borrower {
         uint256 collateralAmount;
         uint256 borrowedAmount;
+        uint256 lastActionTimestamp;
     }
+
+    // A struct to track depositor details
+    struct Depositor {
+        uint256 amount;                 // Amount of stablecoins deposited
+        uint256 lastUpdated;            // Timestamp of last deposit/withdrawal
+        uint256 accumulatedInterestRate; // The global accumulated interest rate when last deposit/withdrawal happened
+    }
+
+
+    address public owner;
 
     IERC20 public stablecoin;
     IERC20 public collateralToken;
     IOracle public oracle;
 
-    mapping(address => uint256) public depositors;
     mapping(address => Borrower) public borrowers;
+    mapping(address => Depositor) public depositors;
 
     uint256 public totalDeposited;
     uint256 public totalBorrowed;
     uint256 public lastUpdated;
+    uint256 public accumulatedInterestRate = 0; // This represents the accumulated interest rate globally
 
     uint256 private constant SCALING_FACTOR = 1e36;
 
-    uint256 public constant COLLATERAL_RATIO = 150 * SCALING_FACTOR;
-    uint256 public constant LIQUIDATION_BONUS = 110 * SCALING_FACTOR;
-    uint256 public constant BASE_BORROW_RATE = 2 * SCALING_FACTOR;
-    uint256 public constant MAX_BORROW_RATE = 15 * SCALING_FACTOR;
+    uint256 public COLLATERAL_RATIO;
+    uint256 public LIQUIDATION_BONUS;
+    uint256 public BASE_BORROW_RATE;
+    uint256 public MAX_BORROW_RATE;
+
     uint256 public constant INTEREST_INTERVAL = 1 days;
+
+
 
     constructor(address _stablecoin, address _collateralToken, address _oracle) 
         ERC20("fToken", "fLend") {
        if(_stablecoin == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
             revert InvalidAddress(address(0), "Invalid address provided");
         }
+        owner = msg.sender;
         stablecoin = IERC20(_stablecoin);
         collateralToken = IERC20(_collateralToken);
         oracle = IOracle(_oracle);
         lastUpdated = block.timestamp;
+
+        COLLATERAL_RATIO = 150 * SCALING_FACTOR;
+        LIQUIDATION_BONUS = 110 * SCALING_FACTOR;
+        BASE_BORROW_RATE = 2 * SCALING_FACTOR;
+        MAX_BORROW_RATE = 15 * SCALING_FACTOR;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not authorized");
+        _;
     }
 
     function getCurrentInterest() internal view returns (uint256) {
@@ -76,6 +108,13 @@ contract P2PLending is ERC20 {
         return BASE_BORROW_RATE + (utilization * (MAX_BORROW_RATE - BASE_BORROW_RATE)) / SCALING_FACTOR;
     }
 
+    function calculateBorrowerInterest(address borrowerAddress) internal view returns (uint256) {
+        Borrower storage borrower = borrowers[borrowerAddress];
+        uint256 intervalsElapsed = (block.timestamp - borrower.lastActionTimestamp) / INTEREST_INTERVAL;
+        return borrower.borrowedAmount * calculateBorrowRate() * intervalsElapsed * INTEREST_INTERVAL / SCALING_FACTOR / 365 days;
+    }
+
+
     function updateTimestamp() internal {
         lastUpdated = block.timestamp;
     }
@@ -83,30 +122,42 @@ contract P2PLending is ERC20 {
     function deposit(uint256 amount) external {
         if (amount <= 0) revert InvalidAmount(amount, "Amount should be greater than 0");
 
-        uint256 fTokensToMint = amount;
-        if (totalSupply() > 0) {
-            uint256 totalValue = totalDeposited + getCurrentInterest();
-            fTokensToMint = (amount * totalSupply()) / totalValue;
+        // Handle previous deposit interest first
+        if(depositors[msg.sender].amount > 0) {
+            uint256 interest = (depositors[msg.sender].amount * (accumulatedInterestRate - depositors[msg.sender].accumulatedInterestRate)) / SCALING_FACTOR;
+            depositors[msg.sender].amount += interest;
+            totalDeposited += interest;
         }
+
+        depositors[msg.sender].amount += amount;
+        depositors[msg.sender].lastUpdated = block.timestamp;
+        depositors[msg.sender].accumulatedInterestRate = accumulatedInterestRate;
+
         updateTimestamp();
-        _mint(msg.sender, fTokensToMint);
-        totalDeposited += amount * SCALING_FACTOR;
+        accumulateInterest();
         stablecoin.safeTransferFrom(msg.sender, address(this), amount);
 
         emit Deposited(msg.sender, amount);
     }
 
-    function withdraw(uint256 fTokenAmount) external {
-        if (fTokenAmount <= 0) revert InvalidAmount(fTokenAmount, "fToken amount should be greater than 0");
+    function withdraw(uint256 amount) external {
+        require(depositors[msg.sender].amount >= amount, "Insufficient funds");
+        
+        // Calculate interest
+        uint256 interest = (depositors[msg.sender].amount * (accumulatedInterestRate - depositors[msg.sender].accumulatedInterestRate)) / SCALING_FACTOR;
+        
+        depositors[msg.sender].amount += interest - amount;  // Add interest and subtract the withdrawal amount
+        totalDeposited += interest - amount * SCALING_FACTOR; 
 
-        uint256 totalValue = totalDeposited + getCurrentInterest();
-        uint256 amount = (fTokenAmount * totalValue) / totalSupply();
-        _burn(msg.sender, fTokenAmount);
-        totalDeposited -= amount;
+        depositors[msg.sender].lastUpdated = block.timestamp;
+        depositors[msg.sender].accumulatedInterestRate = accumulatedInterestRate;
+
         updateTimestamp();
-        stablecoin.safeTransfer(msg.sender, amount / SCALING_FACTOR);
+        accumulateInterest();
+        
+        stablecoin.safeTransfer(msg.sender, amount);
 
-        emit Withdrawn(msg.sender, amount / SCALING_FACTOR);
+        emit Withdrawn(msg.sender, amount);
     }
 
     function borrow(uint256 borrowAmount, uint256 collateralAmount) external {
@@ -117,9 +168,11 @@ contract P2PLending is ERC20 {
         if ((collateralValue * SCALING_FACTOR * 100) / stablecoinValue < COLLATERAL_RATIO)
             revert InsufficientCollateral(COLLATERAL_RATIO, (collateralValue * SCALING_FACTOR * 100) / stablecoinValue);
 
-        borrowers[msg.sender] = Borrower(collateralAmount * SCALING_FACTOR, borrowAmount * SCALING_FACTOR);
+        borrowers[msg.sender] = Borrower(collateralAmount * SCALING_FACTOR, borrowAmount * SCALING_FACTOR, block.timestamp);
         totalBorrowed += borrowAmount * SCALING_FACTOR;
         updateTimestamp();
+        accumulateInterest();
+
         stablecoin.safeTransfer(msg.sender, borrowAmount);
         collateralToken.safeTransferFrom(msg.sender, address(this), collateralAmount);
 
@@ -130,16 +183,26 @@ contract P2PLending is ERC20 {
         if (repayAmount <= 0) revert InvalidAmount(repayAmount, "Repay amount should be greater than 0");
 
         Borrower storage borrower = borrowers[msg.sender];
+
+        borrower.borrowedAmount += calculateBorrowerInterest(msg.sender); // Add accrued interest
+        borrower.lastActionTimestamp = block.timestamp; // Update the last action timestamp
+
+        // Ensure the borrower is not trying to repay more than what they owe
         if (borrower.borrowedAmount < repayAmount * SCALING_FACTOR) revert InvalidAmount(repayAmount, "Invalid repay amount");
 
         borrower.borrowedAmount -= repayAmount * SCALING_FACTOR;
         totalBorrowed -= repayAmount * SCALING_FACTOR;
         updateTimestamp();
+
+        // If borrower's debt is fully repaid, release all collateral
         if (borrower.borrowedAmount == 0) {
             uint256 collateralToReturn = borrower.collateralAmount / SCALING_FACTOR;
             borrower.collateralAmount = 0;
             collateralToken.safeTransfer(msg.sender, collateralToReturn);
         }
+
+        accumulateInterest();
+
         stablecoin.safeTransferFrom(msg.sender, address(this), repayAmount);
 
         emit Repaid(msg.sender, repayAmount);
@@ -152,6 +215,8 @@ contract P2PLending is ERC20 {
         if (borrower.borrowedAmount == 0) revert ActiveBorrowNotFound();
 
         borrower.collateralAmount += collateralAmount * SCALING_FACTOR;
+        accumulateInterest();
+
         collateralToken.safeTransferFrom(msg.sender, address(this), collateralAmount);
 
         emit CollateralAdded(msg.sender, collateralAmount);
@@ -193,9 +258,96 @@ contract P2PLending is ERC20 {
 
         // Send the collateral token to the liquidator.
         borrower.collateralAmount -= totalCollateralToLiquidator;
+
+        accumulateInterest();
+
         collateralToken.safeTransfer(msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
 
         emit Liquidated(user, msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
+    }
+
+    function partialLiquidate(address user, uint256 repayAmount) external {
+        Borrower storage borrower = borrowers[user];
+
+        // Ensure the repayAmount is valid
+        require(repayAmount > 0 && repayAmount <= borrower.borrowedAmount / SCALING_FACTOR, "Invalid repay amount");
+
+        // Calculate how much debt needs to be repaid for this liquidation.
+        uint256 borrowedValue = getTokenValue(stablecoin, borrower.borrowedAmount / SCALING_FACTOR);
+        uint256 collateralValue = getTokenValue(collateralToken, borrower.collateralAmount / SCALING_FACTOR);
+        uint256 requiredCollateralValue = (borrowedValue * COLLATERAL_RATIO) / SCALING_FACTOR;
+        
+        if ((collateralValue * SCALING_FACTOR * 100) / borrower.borrowedAmount >= COLLATERAL_RATIO)
+            revert CannotLiquidate((collateralValue * SCALING_FACTOR * 100) / borrower.borrowedAmount);
+
+        uint256 shortfallValue = requiredCollateralValue - collateralValue;
+        uint256 requiredCollateral = (shortfallValue * SCALING_FACTOR) / oracle.getPrice(address(collateralToken));
+        
+        // Calculate the amount of collateral for the partial liquidation
+        uint256 liquidationCollateralAmount = (requiredCollateral * repayAmount * SCALING_FACTOR) / borrower.borrowedAmount;
+        uint256 liquidationBonus = (liquidationCollateralAmount * LIQUIDATION_BONUS) / SCALING_FACTOR;
+        uint256 totalCollateralToLiquidator = liquidationCollateralAmount + liquidationBonus;
+
+        if (totalCollateralToLiquidator > borrower.collateralAmount) {
+            totalCollateralToLiquidator = borrower.collateralAmount;
+        }
+
+        // Transfer stablecoin from liquidator to the contract.
+        stablecoin.safeTransferFrom(msg.sender, address(this), repayAmount);
+
+        // Reduce borrower's debt.
+        borrower.borrowedAmount -= repayAmount * SCALING_FACTOR;
+        totalBorrowed -= repayAmount * SCALING_FACTOR;
+
+        // Send the collateral token to the liquidator.
+        borrower.collateralAmount -= totalCollateralToLiquidator;
+        
+        accumulateInterest();
+        collateralToken.safeTransfer(msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
+
+        emit Liquidated(user, msg.sender, totalCollateralToLiquidator / SCALING_FACTOR);
+    }
+
+    function accumulateInterest() public {
+        // Compute the global interest based on the interest paid by borrowers.
+        // Here we're assuming depositors get 50% of the total interest charged to borrowers.
+        uint256 globalInterest = getCurrentInterest() / 2;
+
+        // Add the global interest rate increment to the accumulated interest rate.
+        accumulatedInterestRate += (globalInterest * SCALING_FACTOR) / totalDeposited;
+
+        // Increase the total deposited amount by the interest.
+        totalDeposited += globalInterest;
+
+        updateTimestamp();
+    }
+
+
+
+    // admin functions
+    function setCollateralRatio(uint256 _newRatio) external onlyOwner {
+        require(_newRatio > 110 * SCALING_FACTOR, "Collateral ratio too low");
+        COLLATERAL_RATIO = _newRatio;
+        emit CollateralRatioUpdated(_newRatio);
+    }
+
+    function setLiquidationBonus(uint256 _newBonus) external onlyOwner {
+        require(_newBonus < 50 * SCALING_FACTOR, "Liquidation bonus too high");
+        LIQUIDATION_BONUS = _newBonus;
+        emit LiquidationBonusUpdated(_newBonus);
+    }
+
+    function setBaseBorrowRate(uint256 _newRate) external onlyOwner {
+        require(_newRate < MAX_BORROW_RATE, "Base rate cannot be higher than max rate");
+        BASE_BORROW_RATE = _newRate;
+        emit BaseBorrowRateUpdated(_newRate);
+    }
+
+    function setMaxBorrowRate(uint256 _newRate) external onlyOwner {
+        require(_newRate >= BASE_BORROW_RATE, "Max rate cannot be lower than base rate");
+        require(_newRate <= 50 * SCALING_FACTOR, "Max rate too high");
+        MAX_BORROW_RATE = _newRate;
+        emit MaxBorrowRateUpdated(_newRate);
     }
 
 }
