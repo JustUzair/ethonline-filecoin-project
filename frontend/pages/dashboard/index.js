@@ -4,8 +4,10 @@ import fileCoinLogo from "../../assets/img/filecoin.svg";
 import { useMoralis, useWeb3Contract } from "react-moralis";
 import contractAddresses from "../../constants/networkMapping.json";
 import lendingPoolAbi from "../../constants/lendingPoolAbi.json";
+import coinAbi from "../../constants/coinAbi.json";
+import ierc20Abi from "../../constants/ierc20Abi.json";
 import { ethers } from "ethers";
-
+import { useNotification } from "web3uikit";
 var authAnimation;
 
 function openAuthModal() {
@@ -43,7 +45,8 @@ const Dashboard = () => {
   const { runContractFunction } = useWeb3Contract();
   const [userAddress, setUserAddress] = useState("0x00000...000");
   const [tokens, setTokens] = useState([]);
-
+  const [supplyModal, setSupplyModal] = useState(false);
+  const [supplyAmount, setSupplyAmount] = useState(0);
   const [interactionAddress, setInteractionAddress] = useState("");
   const { enableWeb3, authenticate, account, isWeb3Enabled } = useMoralis();
   const { chainId: chainIdHex } = useMoralis();
@@ -54,18 +57,58 @@ const Dashboard = () => {
           contractAddresses[chainId]["lendingPool"].length - 1
         ]
       : null;
+  const dispatch = useNotification();
+  //****************************************************************/
+  //-----------------------NOTIFICATION-----------------------------
+  //****************************************************************/
 
+  const successNotification = (msg) => {
+    dispatch({
+      type: "success",
+      message: `${msg} Successfully! `,
+      title: `${msg}`,
+      position: "bottomR",
+    });
+  };
+
+  const failureNotification = (msg) => {
+    dispatch({
+      type: "error",
+      message: `${msg} ( View console for more info )`,
+      title: `${msg}`,
+      position: "bottomR",
+    });
+  };
+  //****************************************************************/
+  //--------------------END NOTIFICATION-----------------------------
+  //****************************************************************/
   const deposit = async () => {
     if (lendingPoolAddress == null) return;
     if (!isWeb3Enabled) enableWeb3();
     if (account) {
       await runContractFunction({
         params: {
+          abi: ierc20Abi,
+          contractAddress: "0x54efa9BdAE57a9d6564D1C91494B4A6451ca3543",
+          functionName: "approve",
+          params: {
+            spender: lendingPoolAbi,
+            value: ethers.utils.formatUnits(supplyAmount.toString(), "wei"),
+          },
+        },
+        onError: (error) => {
+          console.error(error.message);
+          failureNotification(error.message);
+        },
+        onSuccess: async (data) => {},
+      });
+      await runContractFunction({
+        params: {
           abi: lendingPoolAbi,
           contractAddress: lendingPoolAddress,
           functionName: "deposit",
           params: {
-            amount: ethers.utils.parseEther(tokenDepositAmount).toString(),
+            amount: ethers.utils.formatUnits(supplyAmount.toString(), "wei"),
           },
         },
         onError: (error) => {
@@ -73,8 +116,7 @@ const Dashboard = () => {
           failureNotification(error.message);
         },
         onSuccess: (data) => {
-          const value = ethers.utils.formatUnits(data.toString(), "ether");
-          setCurrentTokenBalance(value.toString());
+          successNotification("Deposited");
         },
       });
     }
@@ -109,7 +151,29 @@ const Dashboard = () => {
               <div id="third" className="relative scale-y-0 opacity-0">
                 <form>
                   <div className="grid grid-cols-2 gap-5">
-                    <input
+                    {supplyModal && (
+                      <>
+                        <label>Amount</label>
+                        <br />
+                        <input
+                          type="tel"
+                          className="border border-gray-500 px-4 py-2 focus:outline-none focus:border-purple-500 col-span-2"
+                          placeholder="Amount in ether"
+                        />
+                        <button
+                          className="focus:outline-none bg-purple-500 px-4 py-2 text-white font-bold w-full"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSupplyModal(true);
+                            setSupplyAmount(0);
+                            deposit();
+                          }}
+                        >
+                          Supply
+                        </button>
+                      </>
+                    )}
+                    {/* <input
                       type="text"
                       className="border border-gray-500 px-4 py-2 focus:outline-none focus:border-purple-500"
                       placeholder="First Name"
@@ -134,15 +198,15 @@ const Dashboard = () => {
                       rows="5"
                       className="border border-gray-500 px-4 py-2 focus:outline-none focus:border-purple-500 col-span-2"
                       placeholder="Write your message..."
-                    ></textarea>
+                    ></textarea> */}
                   </div>
-                  <input
+                  {/* <input
                     type="submit"
                     value="Send Message"
                     className="focus:outline-none mt-5 bg-purple-500 px-4 py-2 text-white font-bold w-full"
-                  />
+                  /> */}
                 </form>
-
+                <br />
                 <div className="text-center">
                   <button
                     onClick={closeAuthModal}
@@ -533,6 +597,7 @@ const Dashboard = () => {
                                 className="focus:outline-none text-white bg-purple-700 mx-4 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900"
                                 onClick={() => {
                                   setInteractionAddress(token.addresses[0]);
+                                  setSupplyModal(true);
                                   console.log(
                                     "===================================="
                                   );

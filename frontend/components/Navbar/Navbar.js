@@ -58,7 +58,7 @@ const Navbar = () => {
 
   useEffect(() => {}, [account]);
   return (
-    <nav style={getStyle.navbar}>
+    <nav style={getStyle.navbar} className="z-[-100]">
       <Link href="/" className="nav__link">
         <div style={getStyle.navbarBrand}>
           <Image src={Logo} alt={"logo"} width={50} height={50}></Image>
