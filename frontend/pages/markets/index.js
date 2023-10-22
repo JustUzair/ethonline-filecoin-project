@@ -127,7 +127,10 @@ const Dashboard = () => {
   };
   useEffect(() => {
     enableWeb3();
-    authenticate();
+    authenticate({
+      provider: "walletconnect",
+      projectId: "3400c6409b7eace10acd27af5d8f1761",
+    });
   }, []);
   useEffect(() => {
     setUserAddress(account);
@@ -148,7 +151,6 @@ const Dashboard = () => {
             id="fourth"
             className="bg-gray-800 max-w-md m-auto mb-0 sm:mb-auto p-3 border border-gray rounded-2xl shadow-sm"
           >
-            
             <div
               id="second"
               className="bg-gray-800 p-4 sm:p-8 w-full rounded-xl shadow-sm scale-y-0 opacity-0"
@@ -156,13 +158,16 @@ const Dashboard = () => {
               <div id="third" className="relative scale-y-0 opacity-0">
                 <form>
                   <div className="grid grid-cols-2 gap-5">
-                  {supplyModal && (
+                    {supplyModal && (
                       <>
-                      
-                        <label><b>Supply USDC</b>
-                        <Image src={usdcLogo} width={60} alt="filecoin" />
-                         </label>
-                        <div style={{color: "white"}}>Supply USDC for other users to borrow, receive ~4.5% APY</div>
+                        <label>
+                          <b>Supply USDC</b>
+                          <Image src={usdcLogo} width={60} alt="filecoin" />
+                        </label>
+                        <div style={{ color: "white" }}>
+                          Supply USDC for other users to borrow, receive ~4.5%
+                          APY
+                        </div>
                         <input
                           type="tel"
                           className="border border-gray-500 px-4 py-2 focus:outline-none focus:border-purple-500 col-span-2"
@@ -182,53 +187,61 @@ const Dashboard = () => {
                       </>
                     )}
 
-{borrowModal && (
+                    {borrowModal && (
                       <>
-                      
-                        <label><b>Borrow USDC</b>
-                        <Image src={usdcLogo} width={60} />
-                         </label>
-                        <div style={{color: "white"}}>Use FIL as collateral.
-                        <Image src={fileCoinLogo} width={60} alt="filecoin" />
+                        <label>
+                          <b>Borrow USDC</b>
+                          <Image src={usdcLogo} width={60} />
+                        </label>
+                        <div style={{ color: "white" }}>
+                          Use FIL as collateral.
+                          <Image src={fileCoinLogo} width={60} alt="filecoin" />
                         </div>
-                        <div style={{color: "white"}}>
-                        <b>Current FIL price:</b> 
+                        <div style={{ color: "white" }}>
+                          <b>Current FIL price:</b>
                         </div>
-                        <div style={{color:"white"}}>$1.20</div>
-                        <div style={{color:"white"}}><b>Current borrow rate:</b></div>
-                        <div style={{color:"white"}}>6% APR*</div>
-                        <div style={{color:"white"}}><b>Minimum collateral required:</b></div>
-                        <div style={{color:"white"}}>150%</div>
-                        <label id="amountBorrow"><b>Borrow</b></label>
-                        <div style={{color: "white", fontSize: "10px"}}>
-                        The maximum amount you can borrow is based on the value of your FIL collateral and the platform's collateral ratio.
+                        <div style={{ color: "white" }}>$1.20</div>
+                        <div style={{ color: "white" }}>
+                          <b>Current borrow rate:</b>
+                        </div>
+                        <div style={{ color: "white" }}>6% APR*</div>
+                        <div style={{ color: "white" }}>
+                          <b>Minimum collateral required:</b>
+                        </div>
+                        <div style={{ color: "white" }}>150%</div>
+                        <label id="amountBorrow">
+                          <b>Borrow</b>
+                        </label>
+                        <div style={{ color: "white", fontSize: "10px" }}>
+                          The maximum amount you can borrow is based on the
+                          value of your FIL collateral and the platform's
+                          collateral ratio.
                         </div>
                         <input
-                            id="amountBorrow"
+                          id="amountBorrow"
                           type="tel"
                           className="border border-gray-500 px-4 py-2 focus:outline-none focus:border-purple-500 col-span-2"
                           placeholder="Amount to borrow"
                         />
-                        <label id="amountBorrow"><b>Collateral</b></label>
-                        <div style={{color: "white", fontSize: "10px"}}>
-                        Depositing more FIL than the minimum required provides a buffer against price volatility and liquidation.
+                        <label id="amountBorrow">
+                          <b>Collateral</b>
+                        </label>
+                        <div style={{ color: "white", fontSize: "10px" }}>
+                          Depositing more FIL than the minimum required provides
+                          a buffer against price volatility and liquidation.
                         </div>
-                        
+
                         <input
-                            id="amountBorrow"
+                          id="amountBorrow"
                           type="tel"
                           className="border border-gray-500 px-4 py-2 focus:outline-none focus:border-purple-500 col-span-2"
                           placeholder="Amount to collateralize"
                         />
-                        <div style={{color: "white", fontSize: "14px"}}>
-                        Liquidation Price:
-                        $0.00
+                        <div style={{ color: "white", fontSize: "14px" }}>
+                          Liquidation Price: $0.00
                         </div>
                         <label></label>
 
-
-
-                
                         <button
                           className="focus:outline-none bg-purple-500 px-4 py-2 text-white font-bold w-full"
                           onClick={(e) => {
@@ -242,9 +255,6 @@ const Dashboard = () => {
                         </button>
                       </>
                     )}
-                    
-
-
                   </div>
                 </form>
                 <br />
@@ -260,11 +270,6 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-   
- 
-       
-
-
 
         <span className="text-[2rem] text-gray-400 align-middle w-[90%] mx-auto my-[30px] font-[400]">
           <div className="flex justify-around items-center w-[40%] text-[3rem] font-[500] text-[#0090FF] sm:flex-wrap md:flex-wrap">
@@ -277,18 +282,19 @@ const Dashboard = () => {
           </div>
           <br />
           {/* Account : {userAddress} */}
-          
+
           <br />
           {/* <span className="text-[1.5rem]">Net Worth : $0</span> */}
         </span>
-        <Image src={fileLendLogo} width={100} alt="filecoin" /> 
-            <div style={{color:"white", fontSize:"40px"}}>FileLend Lending and Borrowing</div>
+        <Image src={fileLendLogo} width={100} alt="filecoin" />
+        <div style={{ color: "white", fontSize: "40px" }}>
+          FileLend Lending and Borrowing
+        </div>
         <div className="flex sm:flex-wrap md:flex-wrap">
           <div className="flex flex-col mt-6 mx-6">
             <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
                 <div className="shadow overflow-hidden sm:rounded-lg">
-                    
                   <span className="text-[2rem] text-gray-400 align-middle w-[35vw] font-[600] text-[#7e22ce]">
                     Markets
                   </span>
@@ -335,77 +341,75 @@ const Dashboard = () => {
                     <tbody className="bg-gray-800">
                       {tokens.map((token) => {
                         if (token.name == "USDC")
-                        return (
-                          <tr>
-                            <td className="">
-                              <span className="flex justify-between items-center px-6 py-4 ">
-                                <Image
-                                  className="w-5"
-                                  src={usdcLogo}
-                                  width={50}
-                                  alt="crypto token"
-                                />
+                          return (
+                            <tr>
+                              <td className="">
+                                <span className="flex justify-between items-center px-6 py-4 ">
+                                  <Image
+                                    className="w-5"
+                                    src={usdcLogo}
+                                    width={50}
+                                    alt="crypto token"
+                                  />
 
-                                <span className="ml-2 font-medium capitalize">
-                                  {token.name}
+                                  <span className="ml-2 font-medium capitalize">
+                                    {token.name}
+                                  </span>
                                 </span>
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                            <span className="flex justify-between items-center px-6 py-4 ">
-                            <Image
-                                  className="w-5"
-                                  src={fileCoinLogo}
-                                  width={50}
-                                  alt="crypto token"
-                                />
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="flex justify-between items-center px-6 py-4 ">
+                                  <Image
+                                    className="w-5"
+                                    src={fileCoinLogo}
+                                    width={50}
+                                    alt="crypto token"
+                                  />
 
-                                <span className="ml-2 font-medium capitalize">
-                                  FIL
+                                  <span className="ml-2 font-medium capitalize">
+                                    FIL
+                                  </span>
                                 </span>
-                                </span>
-                            </td>
-                            <td className="px-6 py-4">4.5%</td>
-                            <td className="px-6 py-4"> 6%
-                            </td>
+                              </td>
+                              <td className="px-6 py-4">4.5%</td>
+                              <td className="px-6 py-4"> 6%</td>
 
-                            <td className="flex justify-between items-center px-6 py-4 whitespace-nowrap ">
-                              <button
-                                type="button"
-                                className="focus:outline-none text-white bg-purple-700 mx-4 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900"
-                                onClick={() => {
-                                  setInteractionAddress(token.addresses[0]);
-                                  setSupplyModal(true);
-                                  setBorrowModal(false);
-                                  console.log(
-                                    "===================================="
-                                  );
-                                  console.log(token.addresses[0]);
-                                  console.log(
-                                    "===================================="
-                                  );
-                                  openAuthModal();
-                                }}
-                              >
-                                Supply
-                              </button>
-                              <button
-                                type="button"
-                                className="text-purple-700 hover:text-white border border-purple-700 hover:bg-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:border-purple-400 dark:text-purple-400 dark:hover:text-white dark:hover:bg-purple-500 dark:focus:ring-purple-900"
-                                onClick={(e) => {
+                              <td className="flex justify-between items-center px-6 py-4 whitespace-nowrap ">
+                                <button
+                                  type="button"
+                                  className="focus:outline-none text-white bg-purple-700 mx-4 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900"
+                                  onClick={() => {
+                                    setInteractionAddress(token.addresses[0]);
+                                    setSupplyModal(true);
+                                    setBorrowModal(false);
+                                    console.log(
+                                      "===================================="
+                                    );
+                                    console.log(token.addresses[0]);
+                                    console.log(
+                                      "===================================="
+                                    );
+                                    openAuthModal();
+                                  }}
+                                >
+                                  Supply
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-purple-700 hover:text-white border border-purple-700 hover:bg-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:border-purple-400 dark:text-purple-400 dark:hover:text-white dark:hover:bg-purple-500 dark:focus:ring-purple-900"
+                                  onClick={(e) => {
                                     setBorrowModal(true);
                                     setSupplyModal(false);
                                     console.log("borrow modal:", borrowModal);
                                     openAuthModal();
-                                }}
-                              >
-                                Borrow
-                              </button>
-                            </td>
-                          </tr>
-                        );
+                                  }}
+                                >
+                                  Borrow
+                                </button>
+                              </td>
+                            </tr>
+                          );
                       })}
-
                     </tbody>
                   </table>
                 </div>

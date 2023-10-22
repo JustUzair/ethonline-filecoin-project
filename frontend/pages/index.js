@@ -21,7 +21,10 @@ export default function Home() {
     enableWeb3();
   }, []);
   useEffect(() => {
-    authenticate();
+    authenticate({
+      provider: "walletconnect",
+      projectId: "3400c6409b7eace10acd27af5d8f1761",
+    });
     // console.log(`Account : ${account}`);
     if (account != null) setLogin(true);
     else setLogin(false);
@@ -42,7 +45,11 @@ export default function Home() {
                 </p>
               </div>
               <p className="text-[#fafafa] text-sm ssm:text-lg lg:text-xl leading-relaxed">
-              Unlock the Power of Your Assets: Seamlessly borrow value against your native Filecoin Virtual Machine holdings. Experience enhanced leverage, greater liquidity, and flexible financial solutions tailored for the decentralized future. Dive into a world where your assets work smarter and harder for you.
+                Unlock the Power of Your Assets: Seamlessly borrow value against
+                your native Filecoin Virtual Machine holdings. Experience
+                enhanced leverage, greater liquidity, and flexible financial
+                solutions tailored for the decentralized future. Dive into a
+                world where your assets work smarter and harder for you.
               </p>
 
               <Link
@@ -54,10 +61,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="md:col-span-6 ">
-              <Image
-                src={fileLendSplash}
-                
-              />
+              <Image src={fileLendSplash} />
             </div>
           </div>
         </section>
@@ -68,12 +72,18 @@ export default function Home() {
           About the App
         </h1>
         <p className="w-9/12 sm:w-8/12 text-[#fafafa] text-sm sm:text-base text-center leading-relaxed italic">
-          
-
-FileLend offers a decentralized peer-to-peer lending platform on the Filecoin blockchain, enabling users to deposit stablecoins to earn interest and borrow funds by providing collateral. Using dynamic interest rates based on platform utilization, it ensures fair returns for depositors while balancing borrowing costs. Additionally, it incorporates safety mechanisms such as overcollateralization and liquidation to safeguard lenders, while administrators have the ability to adjust platform parameters to maintain its integrity and solvency. The platform's reliance on an external oracle for real-time price data also emphasizes the importance of accuracy and trustworthiness in asset valuation.
-          <span className="py-4">
-            
-          </span>
+          FileLend offers a decentralized peer-to-peer lending platform on the
+          Filecoin blockchain, enabling users to deposit stablecoins to earn
+          interest and borrow funds by providing collateral. Using dynamic
+          interest rates based on platform utilization, it ensures fair returns
+          for depositors while balancing borrowing costs. Additionally, it
+          incorporates safety mechanisms such as overcollateralization and
+          liquidation to safeguard lenders, while administrators have the
+          ability to adjust platform parameters to maintain its integrity and
+          solvency. The platform's reliance on an external oracle for real-time
+          price data also emphasizes the importance of accuracy and
+          trustworthiness in asset valuation.
+          <span className="py-4"></span>
         </p>
       </section>
       <section className="h-full w-full text-white py-8  items-center justify-center">
