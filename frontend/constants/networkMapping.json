@@ -6,7 +6,7 @@
         "addresses": ["0xb884adABb32f9B89711F417E7beBBD39161FABe4"]
       },
       {
-        "name": "stablecoin",
+        "name": "USDC",
         "addresses": ["0x54efa9BdAE57a9d6564D1C91494B4A6451ca3543"]
       }
     ],
@@ -19,10 +19,11 @@
         "addresses": []
       },
       {
-        "name": "stablecoin",
+        "name": "USDC",
         "addresses": []
       }
     ],
+    
     "lendingPool": []
   }
 }
