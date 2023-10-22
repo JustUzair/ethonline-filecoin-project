@@ -4,16 +4,10 @@ const PageOne = () => {
   return (
     <div className="text-[#fafafa] w-full flex flex-col items-center py-4">
       <p className="text-2xl sm:text-3xl text-[#f5c9ff] font-bold">
-        Provide your collateral
+      Depositing Stablecoins
       </p>
       <p className="w-10/12 sm:w-5/12 text-sm sm:text-base text-center py-3 leading-relaxed italic">
-        Before gaining access to borrowing on the platform, it's essential to
-        provide collateral as part of the process. This collateral serves as a
-        security measure and is a prerequisite for obtaining borrowing
-        privileges. The extent of your borrowing capacity hinges upon the
-        principle of the loan-to-value (LTV) ratio associated with the
-        collateral you pledge. You can provide collateral by supplying any of
-        the supported tokens.
+      Users can deposit their stablecoins into the platform. Once deposited, these funds start accruing interest over time based on the platform's borrowing activity. The dynamic interest rate system ensures that depositors receive returns that are proportional to the platform's utilization, offering a passive income source. Moreover, the deposited funds also act as the liquidity pool from which other users can borrow.
       </p>
     </div>
   );
@@ -22,17 +16,10 @@ const PageTwo = () => {
   return (
     <div className="text[#fafafa] w-full flex flex-col items-center py-4">
       <p className="text-2xl sm:text-3xl text-[#f5c9ff] font-bold">
-        Borrow from the pool
+        Borrowing Funds with Collateral
       </p>
       <p className="w-10/12 sm:w-5/12 text-sm sm:text-base text-center py-3 leading-relaxed italic">
-        Once you've supplied some supported tokens as collateral, you get the
-        chance to borrow from this platform. The amount you can borrow is
-        decided by how valuable your collateral is. The bigger your collateral's
-        value, the more you can borrow. Think of your collateral like a key.
-        It's the key that opens the door to borrowing. The more valuable the
-        key, the bigger the door it can open. This means if your collateral is
-        worth a lot, you can borrow a lot. Also note that you have to pay a
-        certain amount as interest when it is time to pay back your loan.
+      Users can request to borrow stablecoins by staking a collateral, typically in another cryptocurrency. The collateral ensures that loans are backed by tangible assets, providing security to the lenders. The borrowing interest rate is dynamically calculated based on the platform's overall lending activity, ensuring fairness for borrowers while keeping borrowing costs transparent.
       </p>
     </div>
   );
@@ -41,17 +28,10 @@ const PageThree = () => {
   return (
     <div className="text-[#fafafa] w-full flex flex-col items-center py-4">
       <p className="text-2xl sm:text-3xl text-[#f5c9ff] font-bold">
-        Return the funds you took out.
+      Liquidation Mechanism
       </p>
       <p className="w-10/12 sm:w-5/12 text-sm sm:text-base text-center py-3 leading-relaxed italic">
-        When the time comes for you to return the amount you borrowed as a loan,
-        you'll find a conveniently placed "repay" button awaiting your action.
-        This button is designed to facilitate the repayment process, making it
-        straightforward and user-friendly. By clicking on this button, you
-        initiate the process of settling your loan. It's important to note that
-        repaying the loan involves more than just the principal amount you
-        borrowed. In addition to returning the initial borrowed sum, you'll also
-        need to cover the interest that has accrued during the borrowing period.
+      To further protect the lenders, the platform has a liquidation process in place. If a borrower's collateral value drops below a certain threshold due to market fluctuations, it can be liquidated to repay the borrowed amount. This ensures that lenders always have a degree of protection against potential defaults. Liquidators, users who facilitate this process, receive an incentive in the form of a liquidation bonus, ensuring the platform's health is regularly monitored and maintained.
       </p>
     </div>
   );
@@ -60,14 +40,10 @@ const PageFour = () => {
   return (
     <div className="text-[#fafafa] w-full flex flex-col items-center py-4">
       <p className="text-2xl sm:text-3xl text-[#f5c9ff] font-bold">
-        Withdraw your Collateral
+      Administrative Adjustments
       </p>
       <p className="w-10/12 sm:w-5/12 text-sm sm:text-base text-center py-3 leading-relaxed italic">
-        Once you've successfully settled your outstanding loans and fulfilled
-        your repayment responsibilities, a new opportunity arises: the option to
-        withdraw your pledged collateral. This step marks a significant point in
-        your lending journey, providing you with the chance to regain possession
-        of the assets you originally staked as security.
+      The contract owner, or the platform administrator, possesses unique capabilities to tweak specific parameters of the platform. This includes adjusting collateral requirements, setting base and maximum borrowing rates, and modifying the liquidation bonus. Such adjustments are necessary to respond to changing market dynamics, ensuring the platform remains balanced, solvent, and attractive for both depositors and borrowers.
       </p>
     </div>
   );

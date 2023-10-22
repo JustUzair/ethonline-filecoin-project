@@ -4,7 +4,7 @@ import { FaSearch, FaCommentDots } from "react-icons/fa";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useMoralis, useWeb3Contract } from "react-moralis";
 import Image from "next/image";
-import Logo from "../../assets/img/logo.png";
+import Logo from "../../assets/img/fileLendLogo.png";
 import styled from "styled-components";
 import contractAddresses from "../../constants/networkMapping.json";
 
@@ -68,6 +68,11 @@ const Navbar = () => {
         <li>
           <Link href="/" className="nav__link">
             Home
+          </Link>
+        </li>
+        <li>
+        <Link href="/markets" className="nav__link">
+            Markets
           </Link>
         </li>
         <li>

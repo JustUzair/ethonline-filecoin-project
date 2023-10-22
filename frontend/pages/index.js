@@ -8,7 +8,7 @@ import { FaChevronRight } from "react-icons/fa";
 import MultiStepProgressBar from "../components/MultiStepProgressBar/MultiStepProgressBar";
 import Footer from "../components/Footer/Footer";
 import Link from "next/link";
-import stonks from "../assets/img/stonks.webp";
+import fileLendSplash from "../assets/img/filelendsplash.png";
 import Image from "next/image";
 export default function Home() {
   const [login, setLogin] = useState(false);
@@ -35,30 +35,28 @@ export default function Home() {
           <div className="bg-gradient-to-tr from-[#2b1b6f] to-[#111827] pt-24 md:pt-16 w-full h-full px-4 flex flex-col items-center justify-center md:grid md:grid-cols-12 text-white">
             <div className="flex flex-col md:mt-0 items-start px-4 ssm:px-8 justify-center md:col-span-6 space-y-4">
               <div className="animate__animated animate__backInDown  text-[#fafafa] text-xl ss:text-2xl ssm:text-4xl xl:text-5xl font-medium ">
-                <p>Decentralized</p>
+                <p>More Liquidity for</p>
                 <p>
-                  <span className="text-[#0090ff] text-bold">Lending</span> And{" "}
-                  <span className="text-[#0090ff] text-bold">Borrowing</span>
+                  <span className="text-[#0090ff] text-bold">Finance</span> On{" "}
+                  <span className="text-[#0090ff] text-bold">FVM</span>
                 </p>
               </div>
               <p className="text-[#fafafa] text-sm ssm:text-lg lg:text-xl leading-relaxed">
-                The core purpose of this project is to showcase my adept
-                undestanding of lending and borrowing strategies in the context
-                of blockchain technology.
+              Unlock the Power of Your Assets: Seamlessly borrow value against your native Filecoin Virtual Machine holdings. Experience enhanced leverage, greater liquidity, and flexible financial solutions tailored for the decentralized future. Dive into a world where your assets work smarter and harder for you.
               </p>
 
               <Link
-                href="/dashboard"
+                href="/markets"
                 className="flex items-center space-x-2 ssm:space-x-4 bg-[#0090ff] rounded-full hover:border-orange-900 py-3 px-4 ssm:px-8 text-sm ssm:text-base text-white "
               >
-                <p>Go to Dashboard</p>
+                <p>View the Markets</p>
                 <FaChevronRight className="text-[#0090ff] w-5 h-5 bg-white rounded-full p-1" />
               </Link>
             </div>
             <div className="md:col-span-6 ">
               <Image
-                src={stonks}
-                className="object-cover w-full w-12/12 md:w-10/12"
+                src={fileLendSplash}
+                
               />
             </div>
           </div>
@@ -70,18 +68,11 @@ export default function Home() {
           About the App
         </h1>
         <p className="w-9/12 sm:w-8/12 text-[#fafafa] text-sm sm:text-base text-center leading-relaxed italic">
-          The application serves as a decentralized platform for lending and
-          borrowing, creating an avenue where users can engage in lending
-          activities while also facilitating the borrowing process. A
-          distinctive feature of this platform is its decentralized nature,
-          meaning that it operates without a central authority or intermediary.
-          Instead, it relies on a network of participants who collectively
-          contribute to its functioning.
+          
+
+FileLend offers a decentralized peer-to-peer lending platform on the Filecoin blockchain, enabling users to deposit stablecoins to earn interest and borrow funds by providing collateral. Using dynamic interest rates based on platform utilization, it ensures fair returns for depositors while balancing borrowing costs. Additionally, it incorporates safety mechanisms such as overcollateralization and liquidation to safeguard lenders, while administrators have the ability to adjust platform parameters to maintain its integrity and solvency. The platform's reliance on an external oracle for real-time price data also emphasizes the importance of accuracy and trustworthiness in asset valuation.
           <span className="py-4">
-            This project development process extensively delved into the DEFI
-            platform, AAVE, as a critical source of insights and guidance.
-            Notably, it's crucial to emphasize that the project code is entirely
-            independent and doesn't encompass any code originating from AAVE.
+            
           </span>
         </p>
       </section>
