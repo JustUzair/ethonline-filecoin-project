@@ -90,11 +90,11 @@ const Dashboard = () => {
     if (account) {
       await runContractFunction({
         params: {
-          abi: coinAbi,
+          abi: ierc20Abi,
           contractAddress: "0x54efa9BdAE57a9d6564D1C91494B4A6451ca3543",
           functionName: "approve",
           params: {
-            spender: lendingPoolAbi,
+            spender: lendingPoolAddress,
             amount: ethers.utils.formatUnits(supplyAmount.toString(), "wei"),
           },
         },
@@ -127,10 +127,7 @@ const Dashboard = () => {
   };
   useEffect(() => {
     enableWeb3();
-    authenticate({
-      provider: "walletconnect",
-      projectId: "3400c6409b7eace10acd27af5d8f1761",
-    });
+    authenticate();
   }, []);
   useEffect(() => {
     setUserAddress(account);
@@ -263,10 +260,10 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-gray-800">
-                      {tokens.map((token) => {
+                      {tokens.map((token, index) => {
                         if (token.name == "USDC")
                           return (
-                            <tr>
+                            <tr key={index}>
                               <td className="">
                                 <span className="flex justify-between items-center px-6 py-4 ">
                                   <Image
@@ -376,10 +373,10 @@ const Dashboard = () => {
                     </thead>
 
                     <tbody className="bg-gray-800">
-                      {tokens.map((token) => {
+                      {tokens.map((token, index) => {
                         if (token.name == "filecoin")
                           return (
-                            <tr>
+                            <tr key={index}>
                               <td className="">
                                 <span className="flex justify-between items-center px-6 py-4 ">
                                   <Image

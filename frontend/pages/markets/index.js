@@ -96,8 +96,8 @@ const Dashboard = () => {
           contractAddress: "0x54efa9BdAE57a9d6564D1C91494B4A6451ca3543",
           functionName: "approve",
           params: {
-            spender: lendingPoolAbi,
-            value: ethers.utils.formatUnits(supplyAmount.toString(), "wei"),
+            spender: lendingPoolAddress,
+            amount: ethers.utils.formatUnits(supplyAmount.toString(), "wei"),
           },
         },
         onError: (error) => {
@@ -127,10 +127,7 @@ const Dashboard = () => {
   };
   useEffect(() => {
     enableWeb3();
-    authenticate({
-      provider: "walletconnect",
-      projectId: "3400c6409b7eace10acd27af5d8f1761",
-    });
+    authenticate();
   }, []);
   useEffect(() => {
     setUserAddress(account);
@@ -339,10 +336,10 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-gray-800">
-                      {tokens.map((token) => {
+                      {tokens.map((token, index) => {
                         if (token.name == "USDC")
                           return (
-                            <tr>
+                            <tr key={index}>
                               <td className="">
                                 <span className="flex justify-between items-center px-6 py-4 ">
                                   <Image

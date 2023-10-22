@@ -21,10 +21,7 @@ export default function Home() {
     enableWeb3();
   }, []);
   useEffect(() => {
-    authenticate({
-      provider: "walletconnect",
-      projectId: "3400c6409b7eace10acd27af5d8f1761",
-    });
+    authenticate();
     // console.log(`Account : ${account}`);
     if (account != null) setLogin(true);
     else setLogin(false);

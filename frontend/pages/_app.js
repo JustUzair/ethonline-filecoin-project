@@ -38,7 +38,7 @@ const filecoinCalibrationTestnet = {
   network: "filecoin-testnet",
 
   rpcUrls: {
-    public: { http: ["https://filecoin-calibration.chainup.net/rpc/v1"] },
+    public: { http: ["https://rpc.ankr.com/filecoin_testnet"] },
   },
   blockExplorers: {
     default: {
