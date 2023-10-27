@@ -134,7 +134,6 @@ contract P2PLending is ERC20 {
         depositors[msg.sender].accumulatedInterestRate = accumulatedInterestRate;
 
         updateTimestamp();
-        accumulateInterest();
         stablecoin.safeTransferFrom(msg.sender, address(this), amount);
 
         emit Deposited(msg.sender, amount);
